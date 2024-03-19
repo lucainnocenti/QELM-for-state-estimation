@@ -1,6 +1,6 @@
 (* ::Package:: *)
 
-BeginPackage["QELM`", {"QM`"}];
+BeginPackage["QELM`"];
 
 (* Usage messages *)
 sampleFromState;
