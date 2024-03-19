@@ -28,6 +28,14 @@ RandomUnitary[m_] := Orthogonalize[
 (* Takes a state as a vector and returns its density matrix *)
 QStateToDensityMatrix[ket_List] := KroneckerProduct[ket, Conjugate @ ket];
 
+
+(* Takes a probability vector and a number of samples and returns a list of outcomes *)
+sampleFromProbabilities[probabilities_, numSamples_Integer] := RandomChoice[
+    Rule[probabilities, Range @ Length @ probabilities],
+    numSamples
+];
+
+
 (* Takes a state and a POVM, and samples from the probability distribution obtained combining them *)
 (* The output is a list of the form `{1, 2, 2, 3, ...}` if the outcome "1" happened, etc *)
 (* Here states are to be given as density matrices *)
@@ -35,7 +43,8 @@ sampleFromState[state_, povm_, numSamples_Integer] := With[{
         probabilities = Chop@Table[opDot[povmElem, state], {povmElem, povm}]
     },
     (* extract numSamples from the probability distribution obtained combining state and povm *)
-    RandomChoice[Rule[probabilities, Range @ Length @ probabilities], numSamples]
+    (* RandomChoice[Rule[probabilities, Range @ Length @ probabilities], numSamples] *)
+    sampleFromProbabilities[probabilities, numSamples]
 ];
 
 
