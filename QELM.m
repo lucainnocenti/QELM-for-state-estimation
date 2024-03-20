@@ -3,6 +3,7 @@
 BeginPackage["QELM`"];
 
 (* Usage messages *)
+sampleFromProbabilities
 sampleFromState;
 countSamples;
 estimateMeasurementProbsForState;
@@ -14,6 +15,7 @@ dirtyProbsMatrixFromStates;
 Begin["`Private`"];
 
 
+(* Computes the dot product of two matrices. *)
 opDot[a_, b_] := Tr @ Dot[ConjugateTranspose @ a, b];
 
 
