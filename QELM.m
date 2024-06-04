@@ -9,6 +9,8 @@ countSamples;
 estimateMeasurementProbsForState;
 dirtyProbsMatrixFromStates;
 
+trainQELMForObservableFromStates
+
 
 (* More usage messages for other functions go here *)
 
@@ -133,9 +135,9 @@ trainAndTestQELMForObservables[trainingStates_, targetObservables_, povm_, testS
         ]
     },
     With[{obtainedExpvalsMatrix = Dot[wMatrix, dirtyProbsMatrixFromStates[testStates, povm, numSamples]]},
-    (* finally, compute MSEs for each target observable (it's going to be a numObs x 1 matrix) *)
-    Total /@ ((obtainedExpvalsMatrix - trueExpvalsMatrix)^2)
-]
+        (* finally, compute MSEs for each target observable (it's going to be a numObs x 1 matrix) *)
+        Total /@ ((obtainedExpvalsMatrix - trueExpvalsMatrix)^2)
+    ]
 ]
 
 
