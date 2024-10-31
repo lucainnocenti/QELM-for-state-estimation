@@ -8,6 +8,7 @@ sampleFromState;
 countSamples;
 estimateMeasurementProbsForState;
 dirtyProbsMatrixFromStates;
+soilProbabilityVector;
 
 trainQELMForObservableFromStates
 
@@ -75,6 +76,12 @@ countSamples[samplesList_, maxInt_Integer : None] := With[{
         {int, If[maxInt === None, Max @ samplesList, maxInt]}
     ]
 ];
+
+
+soilProbabilityVector[probabilities_List, numSamples_Integer] := countSamples[
+	sampleFromProbabilities[probabilities, numSamples],
+	Length @ probabilities
+] // Map @ Last // # / N @ numSamples &;
 
 
 (* Takes a state and a povm, samples from its prob distribution numSamples times, and returns the observed frequency of each outcome *)
