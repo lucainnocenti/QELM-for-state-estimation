@@ -3,12 +3,14 @@
 BeginPackage["QELM`"];
 
 (* Usage messages *)
+probabilityMatrixFromStatesAndPOVM;
 sampleFromProbabilities
 sampleFromState;
 countSamples;
 estimateMeasurementProbsForState;
 dirtyProbsMatrixFromStates;
 soilProbabilityVector;
+randomRank1POVM;
 
 trainQELMForObservableFromStates
 
@@ -32,6 +34,15 @@ RandomUnitary[m_] := Orthogonalize[
 
 (* Takes a state as a vector and returns its density matrix *)
 QStateToDensityMatrix[ket_List] := KroneckerProduct[ket, Conjugate @ ket];
+
+
+(* Take a list of density matrices and a POVM, and return the corresponding matrix of probabilities. *)
+(* The returned matrix has dimensions num_outcomes x num_states *)
+probabilityMatrixFromStatesAndPOVM[states_, povm_] := Table[
+    Chop @ opDot[povmElem, state],
+    {povmElem, povm},
+    {state, states}
+];
 
 
 (* Takes a probability vector and a number of samples and returns a list of outcomes *)
@@ -146,6 +157,11 @@ trainAndTestQELMForObservables[trainingStates_, targetObservables_, povm_, testS
         Total /@ ((obtainedExpvalsMatrix - trueExpvalsMatrix)^2)
     ]
 ]
+
+
+randomRank1POVM[dim_Integer, numOutcomes_Integer] := QStateToDensityMatrix /@ (
+	RandomUnitary[numOutcomes][[All, ;; dim]]
+);
 
 
 (* More functions and shit go here *)
