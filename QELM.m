@@ -1,6 +1,6 @@
 (* ::Package:: *)
 
-BeginPackage["QELM`"];
+BeginPackage["QELM`", {"QM`"}];
 
 (* Usage messages *)
 probabilityMatrixFromStatesAndPOVM;
@@ -12,7 +12,9 @@ dirtyProbsMatrixFromStates;
 soilProbabilityVector;
 randomRank1POVM;
 
-trainQELMForObservableFromStates
+trainQELMForObservableFromStates;
+trainQELMfromTargetsAndFrequencies;
+trainQELM;
 
 
 (* More usage messages for other functions go here *)
@@ -26,14 +28,14 @@ opDot[a_, b_] := Tr @ Dot[ConjugateTranspose @ a, b];
 
 (* Generate a random unitary matrix, drawn from the uniform distribution. *)
 (* The method is from Maris Ozols, 'How to generate a random unitary matrix'. *)
-RandomUnitary[m_] := Orthogonalize[
+(* RandomUnitary[m_] := Orthogonalize[
   Map[#[[1]] + I #[[2]]&, #, {2}]& @ RandomReal[
     NormalDistribution[0, 1], {m, m, 2}
   ]
-];
+]; *)
 
 (* Takes a state as a vector and returns its density matrix *)
-QStateToDensityMatrix[ket_List] := KroneckerProduct[ket, Conjugate @ ket];
+(* QStateToDensityMatrix[ket_List] := KroneckerProduct[ket, Conjugate @ ket]; *)
 
 
 (* Take a list of density matrices and a POVM, and return the corresponding matrix of probabilities. *)
@@ -135,13 +137,77 @@ trainQELMForObservableFromStates[trainingStates_, targetObservables_, povm_, num
             {state, trainingStates}
         ]
     },
-    Dot[
-        expvalsMatrix,
-        PseudoInverse @ dirtyProbsMatrix
-    ] (* this returns W *)
+    trainQELMfromTargetsAndFrequencies[expvalsMatrix, dirtyProbsMatrix]
+    (* this returns W *)
 ];
 
 
+(* this takes target expectation values and a probability matrix *)
+(* uses them to perform the training and get the W *)
+trainQELMfromTargetsAndFrequencies[labels_, frequencies_] := Dot[
+    labels,
+    PseudoInverse @ frequencies
+]; (* this returns W *)
+
+(* this is supposed the general interface to train QELMs, for various types of information given *)
+Options[trainQELM] = {
+    "trainingStates" -> None,
+    "targetObservables" -> None,
+    "POVM" -> None,
+    "numSamples" -> None,
+    "labels" -> None,
+    "frequencies" -> None,
+    "returnLabels" -> False
+};
+(* General interface to train QELMs, for various types of information given *)
+trainQELM[opts : OptionsPattern[]] := Which[
+    (* Case 1: Compute labels from trainingStates and targetObservables if not given *)
+    OptionValue["trainingStates"] =!= None && OptionValue["targetObservables"] =!= None && OptionValue["labels"] === None,
+    With[
+        {
+            labels = Chop@Table[
+                opDot[observable, state],
+                {observable, OptionValue["targetObservables"]},
+                {state, OptionValue["trainingStates"]}
+            ]
+        },
+        trainQELM[
+            "labels" -> labels,
+            Sequence @@ FilterRules[{opts}, Except["labels"] ]
+        ]
+    ],
+    (* Case 2: Compute frequencies if not given *)
+    OptionValue["trainingStates"] =!= None && OptionValue["POVM"] =!= None && OptionValue["frequencies"] === None,
+    With[
+        {
+            frequencies = dirtyProbsMatrixFromStates[
+                OptionValue["trainingStates"],
+                OptionValue["POVM"],
+                OptionValue["numSamples"]
+            ]
+        },
+        trainQELM[
+            "frequencies" -> frequencies,
+            Sequence @@ FilterRules[{opts}, Except["frequencies"] ]
+        ]
+    ],
+    (* Case 3: Training with labels and frequencies *)
+    OptionValue["labels"] =!= None && OptionValue["frequencies"] =!= None,
+    Module[{result = trainQELMfromTargetsAndFrequencies[
+        OptionValue["labels"],
+        OptionValue["frequencies"]
+    ]},
+        If[OptionValue["returnLabels"],
+            {result, OptionValue["labels"]},
+            result
+        ]
+    ],
+    (* Default case: Invalid arguments *)
+    True,
+    Message[trainQELM::invalidArgs]
+];
+
+(* train AND test *)
 trainAndTestQELMForObservables[trainingStates_, targetObservables_, povm_, testStates_, numSamples_Integer] := With[{
         wMatrix = trainQELMForObservableFromStates[
             trainingStates, targetObservables, povm, numSamples
@@ -157,11 +223,6 @@ trainAndTestQELMForObservables[trainingStates_, targetObservables_, povm_, testS
         Total /@ ((obtainedExpvalsMatrix - trueExpvalsMatrix)^2)
     ]
 ]
-
-
-randomRank1POVM[dim_Integer, numOutcomes_Integer] := QStateToDensityMatrix /@ (
-	RandomUnitary[numOutcomes][[All, ;; dim]]
-);
 
 
 (* More functions and shit go here *)
