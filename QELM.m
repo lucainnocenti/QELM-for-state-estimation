@@ -142,14 +142,55 @@ trainQELMForObservableFromStates[trainingStates_, targetObservables_, povm_, num
 ];
 
 
+(* this takes a matrix and removes all rows after the k-th *)
+(* this is used to implement the "keepOnlyKSingularValues" option of trainQELMfromTargetsAndFrequencies *)
+removeRowsAfterK[matrix_, k_Integer] := ReplacePart[
+    matrix,
+    {{i_, j_} /; i > k :> 0}
+];
+(* this takes a matrix and truncates its singular values after k *)
+(* this is used to implement the "keepOnlyKSingularValues" option of trainQELMfromTargetsAndFrequencies *)
+truncateSingularValuesAfterK[matrix_, k_Integer] := Dot[
+    #[[1]],
+    removeRowsAfterK[#[[2]], k],
+    ConjugateTranspose@#[[3]]
+]& @ SingularValueDecomposition @ matrix;
+
+
 (* this takes target expectation values and a probability matrix *)
 (* uses them to perform the training and get the W *)
-trainQELMfromTargetsAndFrequencies[labels_, frequencies_] := Dot[
-    labels,
-    PseudoInverse @ frequencies
-]; (* this returns W *)
+(* The pseudoinverse is computed after truncation if specified via options *)
+Options[trainQELMfromTargetsAndFrequencies] = {
+    "keepOnlyKSingularValues" -> None,
+    "ridgeRegression" -> None
+};
+trainQELMfromTargetsAndFrequencies[labels_, frequencies_, opts : OptionsPattern[] ] := With[
+    {
+        (* truncate singular values if required *)
+        frequenciesModified = If[
+            IntegerQ[OptionValue["keepOnlyKSingularValues"] ] && OptionValue["keepOnlyKSingularValues"] >= 1,
+            truncateSingularValuesAfterK[frequencies, OptionValue["keepOnlyKSingularValues"] ],
+            frequencies
+        ]
+    },
+    If[
+        NumericQ[OptionValue["ridgeRegression"] ],
+        (* use the ridge regressor if required *)
+        Echo[#,"",MatrixForm]& @ Dot[
+            labels,
+            Transpose @ frequenciesModified,
+            Inverse @ Plus[
+                Dot[frequenciesModified, Transpose @ frequenciesModified],
+                OptionValue["ridgeRegression"] * IdentityMatrix[Dimensions[frequenciesModified][[1]] ]
+            ]
+        ],
+        (* otherwise use the standard pseudoinverse *)
+        Dot[labels, PseudoInverse @ frequenciesModified]
+    ]
+];
 
-(* this is supposed the general interface to train QELMs, for various types of information given *)
+
+(* General interface to train QELMs, for various types of information given *)
 Options[trainQELM] = {
     "trainingStates" -> None,
     "targetObservables" -> None,
@@ -157,9 +198,10 @@ Options[trainQELM] = {
     "numSamples" -> None,
     "labels" -> None,
     "frequencies" -> None,
-    "returnLabels" -> False
+    "returnLabels" -> False,
+    "keepOnlyKSingularValues" -> None,
+    "ridgeRegression" -> None
 };
-(* General interface to train QELMs, for various types of information given *)
 trainQELM[opts : OptionsPattern[]] := Which[
     (* Case 1: Compute labels from trainingStates and targetObservables if not given *)
     OptionValue["trainingStates"] =!= None && OptionValue["targetObservables"] =!= None && OptionValue["labels"] === None,
@@ -193,10 +235,13 @@ trainQELM[opts : OptionsPattern[]] := Which[
     ],
     (* Case 3: Training with labels and frequencies *)
     OptionValue["labels"] =!= None && OptionValue["frequencies"] =!= None,
-    Module[{result = trainQELMfromTargetsAndFrequencies[
+    With[{result = trainQELMfromTargetsAndFrequencies[
         OptionValue["labels"],
-        OptionValue["frequencies"]
+        OptionValue["frequencies"],
+        "keepOnlyKSingularValues" -> OptionValue["keepOnlyKSingularValues"],
+        "ridgeRegression" -> OptionValue["ridgeRegression"]
     ]},
+        (* Return also the computed target observables, if asked *)
         If[OptionValue["returnLabels"],
             {result, OptionValue["labels"]},
             result
