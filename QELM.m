@@ -176,7 +176,8 @@ trainQELMfromTargetsAndFrequencies[labels_, frequencies_, opts : OptionsPattern[
     If[
         NumericQ[OptionValue["ridgeRegression"] ],
         (* use the ridge regressor if required *)
-        Echo[#,"",MatrixForm]& @ Dot[
+        (* Echo[#,"llll",MatrixForm]& @  *)
+        Dot[
             labels,
             Transpose @ frequenciesModified,
             Inverse @ Plus[
