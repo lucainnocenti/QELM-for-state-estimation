@@ -271,8 +271,6 @@ trainAndTestQELMForObservables[trainingStates_, targetObservables_, povm_, testS
 ]
 
 
-(* More functions and shit go here *)
-
 End[];  (* End `Private` *)
 
 EndPackage[];
