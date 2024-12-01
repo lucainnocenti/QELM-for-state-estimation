@@ -15,6 +15,7 @@ randomRank1POVM;
 trainQELMForObservableFromStates;
 trainQELMfromTargetsAndFrequencies;
 trainQELM;
+qelmData;
 
 
 (* More usage messages for other functions go here *)
@@ -253,6 +254,19 @@ trainQELM[opts : OptionsPattern[]] := Which[
     Message[trainQELM::invalidArgs]
 ];
 
+(* trainQELM also operates on qelmData structures. *)
+(* In this case,  *)
+trainQELM[qelmData[data_Association], opts : OptionsPattern[] ] := qelmData @ Append[data, {
+    "train" -> Append[data["train"],
+        "W" -> trainQELM[
+            "labels" -> data["train"]["trueOutcomes"],
+            "frequencies" -> data["train"]["counts"],
+            "numSamples" -> OptionValue["numSamples"]
+        ]
+    ]
+}];
+
+
 (* train AND test *)
 trainAndTestQELMForObservables[trainingStates_, targetObservables_, povm_, testStates_, numSamples_Integer] := With[{
         wMatrix = trainQELMForObservableFromStates[
@@ -269,6 +283,42 @@ trainAndTestQELMForObservables[trainingStates_, targetObservables_, povm_, testS
         Total /@ ((obtainedExpvalsMatrix - trueExpvalsMatrix)^2)
     ]
 ]
+
+
+expvalsFromStatesAndObservablesKets[kets_, observables_] := Table[
+    Chop @ Dot[ConjugateTranspose @ ket, observable, ket],
+    {observable, observables},
+    {ket, kets}
+];
+expvalsFromStatesAndObservablesDms[dms_, observables_] := Table[
+    Chop @ Tr @ Dot[dm, observable],
+    {observable, observables},
+    {dm, dms}
+];
+
+
+(* qelmData contains "train" and "test". Each one of these contains "inputStates" and "counts" *)
+(* "inputStates" has dimensions num_states x size_states *)
+(* "counts" has dimensions num_outcomes x num_states *)
+(* If computed, each of train and test should also have a "trueOutcomes" field *)
+qelmData[data_Association]["computeTrueExpvals"] := qelmData @ Append[data, {
+    "train" -> Append[data["train"],
+        "trueOutcomes" -> If[data["statesAsKets"],
+            expvalsFromStatesAndObservablesKets[data["train"]["inputStates"], data["targetObservables"] ],
+            expvalsFromStatesAndObservablesDms[data["train"]["inputStates"], data["targetObservables"] ]
+        ]
+    ],
+    "test" -> Append[data["test"],
+        "trueOutcomes" -> If[data["statesAsKets"],
+            expvalsFromStatesAndObservablesKets[data["test"]["inputStates"], data["targetObservables"] ],
+            expvalsFromStatesAndObservablesDms[data["test"]["inputStates"], data["targetObservables"] ]
+        ]
+    ]
+}];
+
+
+qelmData[data_Association][key_String] := data[key];
+
 
 
 End[];  (* End `Private` *)
