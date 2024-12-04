@@ -316,6 +316,11 @@ qelmData[data_Association]["computeTrueExpvals"] := qelmData @ Append[data, {
     ]
 }];
 
+qelmData[data_Association]["computeTestMSE"] := Plus[
+    Dot[data["train"]["W"], data["test"]["counts"] ],
+    - data["test"]["trueOutcomes"]
+]^2 // Map @ Mean;
+
 
 qelmData[data_Association][key_String] := data[key];
 
