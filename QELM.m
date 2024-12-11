@@ -297,6 +297,8 @@ expvalsFromStatesAndObservablesDms[dms_, observables_] := Table[
 ];
 
 
+
+
 (* qelmData contains "train" and "test". Each one of these contains "inputStates" and "counts" *)
 (* "inputStates" has dimensions num_states x size_states *)
 (* "counts" has dimensions num_outcomes x num_states *)
@@ -320,6 +322,25 @@ qelmData[data_Association]["computeTestMSE"] := Plus[
     Dot[data["train"]["W"], data["test"]["counts"] ],
     - data["test"]["trueOutcomes"]
 ]^2 // Map @ Mean;
+
+
+(* These produce the dual of the effective POVM, using knowledge of a bunch of density matrices and associated counts *)
+computeDualPOVMFromDMs[listOfDMs_List, countsMatrix_List?MatrixQ] := Transpose @ Dot[
+    Transpose[listOfDMs, {3, 1, 2}], (* this converts into an array whose third dimension is the number of states *)
+    PseudoInverse @ countsMatrix (* countsMatrix must have dimensions num_outcomes x num_states*)
+];
+computeDualPOVMFromKets[listOfKets_List, countsMatrix_List?MatrixQ] := computeDualPOVMFromDMs[QStateToDensityMatrix /@ listOfKets, countsMatrix];
+
+
+qelmData[data_Association]["computeDualEffectivePOVM"] := qelmData @ Append[data, {
+    "train" -> Append[
+        data["train"],
+        "dualEffectivePOVM" -> If[data["statesAsKets"],
+            computeDualPOVMFromKets[data["train"]["inputStates"], data["train"]["counts"] ],
+            computeDualPOVMFromDMs[data["train"]["inputStates"], data["train"]["counts"] ]
+        ]
+    ]
+}];
 
 
 qelmData[data_Association][key_String] := data[key];
