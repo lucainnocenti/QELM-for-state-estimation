@@ -13,6 +13,7 @@ soilProbabilityVector;
 randomRank1POVM;
 
 trainQELMForObservableFromStates;
+trainAndTestQELMForObservables;
 trainQELMfromTargetsAndFrequencies;
 trainQELM;
 qelmData;
@@ -141,6 +142,24 @@ trainQELMForObservableFromStates[trainingStates_, targetObservables_, povm_, num
     trainQELMfromTargetsAndFrequencies[expvalsMatrix, dirtyProbsMatrix]
     (* this returns W *)
 ];
+
+(* same as above but for infinite statistics training *)
+trainQELMForObservableFromStates[trainingStates_, targetObservables_, povm_, Infinity] := With[{
+        probabilities = Chop @ Table[
+            opDot[povmElem, state],
+            {povmElem, povm},
+            {state, trainingStates}
+        ],
+        expvalsMatrix = Chop @ Table[
+            opDot[ConjugateTranspose @ observable, state],
+            {observable, targetObservables},
+            {state, trainingStates}
+        ]
+    },
+    (* build and return W *)
+    Dot[expvalsMatrix, PseudoInverse @ probabilities]
+];
+
 
 
 (* this takes a matrix and removes all rows after the k-th *)
