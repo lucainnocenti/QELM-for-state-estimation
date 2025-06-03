@@ -1,6 +1,6 @@
 (* ::Package:: *)
 
-BeginPackage["QELM`", {"QM`"}];
+BeginPackage["QELM`"];
 
 (* Usage messages *)
 probabilityMatrixFromStatesAndPOVM;
@@ -30,14 +30,14 @@ opDot[a_, b_] := Tr @ Dot[ConjugateTranspose @ a, b];
 
 (* Generate a random unitary matrix, drawn from the uniform distribution. *)
 (* The method is from Maris Ozols, 'How to generate a random unitary matrix'. *)
-(* RandomUnitary[m_] := Orthogonalize[
+RandomUnitary[m_] := Orthogonalize[
   Map[#[[1]] + I #[[2]]&, #, {2}]& @ RandomReal[
     NormalDistribution[0, 1], {m, m, 2}
   ]
-]; *)
+];
 
 (* Takes a state as a vector and returns its density matrix *)
-(* QStateToDensityMatrix[ket_List] := KroneckerProduct[ket, Conjugate @ ket]; *)
+QStateToDensityMatrix[ket_List] := KroneckerProduct[ket, Conjugate @ ket];
 
 
 (* Take a list of density matrices and a POVM, and return the corresponding matrix of probabilities. *)
