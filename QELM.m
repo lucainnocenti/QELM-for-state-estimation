@@ -301,7 +301,29 @@ trainAndTestQELMForObservables[trainingStates_, targetObservables_, povm_, testS
         (* finally, compute MSEs for each target observable (it's going to be a numObs x 1 matrix) *)
         Total /@ ((obtainedExpvalsMatrix - trueExpvalsMatrix)^2)
     ]
-]
+];
+
+(* same as above but with an interface taking named parameters *)
+Options[trainAndTestQELMForObservables] = {
+    "trainingStates" -> None,
+    "targetObservables" -> None,
+    "POVM" -> None,
+    "testStates" -> None,
+    "numSamples" -> None
+};
+trainAndTestQELMForObservables[opts : OptionsPattern[]] := With[{
+        trainingStates = OptionValue["trainingStates"],
+        targetObservables = OptionValue["targetObservables"],
+        povm = OptionValue["POVM"],
+        testStates = OptionValue["testStates"],
+        numSamples = OptionValue["numSamples"]
+    },
+    trainAndTestQELMForObservables[
+        trainingStates, targetObservables, povm, testStates, numSamples
+    ]
+];
+
+(* trainAndTestQELMForObservables also operates on qelmData structures. *)
 
 
 expvalsFromStatesAndObservablesKets[kets_, observables_] := Table[
